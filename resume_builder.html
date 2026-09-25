@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonator - Minimalist Innovative Resume Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f4f6f8',
+                            100: '#e1e7ec',
+                            500: '#0f172a',
+                            600: '#090d16',
+                            700: '#04060a'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #resume-preview-container, #resume-preview-container * {
+                visibility: visible;
+            }
+            #resume-preview-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        /* Custom scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 font-sans antialiased overflow-hidden flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 no-print z-20">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                R
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-900 tracking-tight text-lg">Resonator</h1>
+                <p class="text-xs text-slate-500 hidden sm:block">Minimalist AI-Powered Resume Studio</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="app.resetData()" class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition border border-slate-200">
+                Reset Form
+            </button>
+            <button onclick="app.exportPDF()" class="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition active:scale-95">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Export PDF / Print</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Pane: Questionnaire Wizard -->
+        <section class="w-full lg:w-5/12 xl:w-4/12 bg-white border-r border-slate-200 flex flex-col h-full no-print z-10 shadow-lg lg:shadow-none">
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-100 h-1.5 shrink-0">
+                <div id="wizard-progress" class="bg-slate-900 h-1.5 transition-all duration-300" style="width: 20%;"></div>
+            </div>
+
+            <!-- Wizard Steps Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-2">
+                    <span id="step-counter" class="w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center">1</span>
+                    <h2 id="step-title" class="font-semibold text-slate-900 text-sm">Personal Information</h2>
+                </div>
+                <div class="text-xs text-slate-400 font-medium">Step <span id="current-step-num">1</span> of 5</div>
+            </div>
+
+            <!-- Form Content Area (Scrollable) -->
+            <div id="wizard-form-container" class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Injected dynamically via JS based on current step -->
+            </div>
+
+            <!-- Wizard Footer Navigation -->
+            <div class="p-4 border-t border-slate-100 bg-white flex items-center justify-between shrink-0">
+                <button id="prev-btn" onclick="app.prevStep()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition disabled:opacity-30 disabled:hover:bg-transparent" disabled>
+                    Back
+                </button>
+                <button id="next-btn" onclick="app.nextStep()" class="px-5 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 rounded-xl transition shadow-sm">
+                    Continue
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Pane: Real-time Live Resume Preview -->
+        <section class="flex-1 bg-slate-100 overflow-y-auto p-4 sm:p-8 flex items-start justify-center">
+            
+            <div class="w-full max-w-3xl flex flex-col items-center space-y-4">
+                
+                <!-- Resume Controls Toolbar (Layout & Style selector) -->
+                <div class="w-full bg-white border border-slate-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm no-print">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Layout:</span>
+                        <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-medium">
+                            <button onclick="app.setLayout('modern')" id="layout-modern" class="px-3 py-1.5 rounded-lg transition bg-white text-slate-900 shadow-sm">Modern</button>
+                            <button onclick="app.setLayout('executive')" id="layout-executive" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900">Executive</button>
+                            <button onclick="app.setLayout('creative')" id="layout-creative" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900">Creative</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Accent:</span>
+                        <div class="flex items-center space-x-1.5">
+                            <button onclick="app.setAccent('#0f172a')" class="w-5 h-5 rounded-full bg-slate-900 border-2 border-white shadow-sm ring-1 ring-slate-300 transition hover:scale-110" title="Slate Black"></button>
+                            <button onclick="app.setAccent('#2563eb')" class="w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow-sm ring-1 ring-slate-300 transition hover:scale-110" title="Royal Blue"></button>
+                            <button onclick="app.setAccent('#059669')" class="w-5 h-5 rounded-full bg-emerald-600 border-2 border-white shadow-sm ring-1 ring-slate-300 transition hover:scale-110" title="Emerald Green"></button>
+                            <button onclick="app.setAccent('#7c3aed')" class="w-5 h-5 rounded-full bg-violet-600 border-2 border-white shadow-sm ring-1 ring-slate-300 transition hover:scale-110" title="Violet Purple"></button>
+                            <button onclick="app.setAccent('#dc2626')" class="w-5 h-5 rounded-full bg-red-600 border-2 border-white shadow-sm ring-1 ring-slate-300 transition hover:scale-110" title="Crimson Red"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Resume Sheet Document -->
+                <div id="resume-preview-container" class="w-full bg-white shadow-2xl rounded-sm border border-slate-200 transition-all duration-300 min-h-[1050px] p-10 sm:p-14 text-slate-800">
+                    <!-- Dynamic Resume Content rendered via app.renderPreview() -->
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Application State Object
+        const DEFAULT_DATA = {
+            step: 1,
+            layout: 'modern',
+            accent: '#0f172a',
+            personal: {
+                fullName: 'Alexander Wright',
+                jobTitle: 'Senior Full-Stack Product Engineer',
+                email: 'alexander.wright@innovate.io',
+                phone: '+1 (555) 382-9012',
+                location: 'San Francisco, CA',
+                website: 'awright.dev',
+                linkedin: 'https://www.linkedin.com/in/something',
+                summary: 'Innovative and results-driven software engineer with 7+ years of expertise designing scalable distributed cloud systems, modern web architectures, and delightful human-centered user experiences.'
+            },
+            experiences: [
+                {
+                    id: 1,
+                    role: 'Lead Frontend Architect',
+                    company: 'Vortex Technologies',
+                    location: 'San Francisco, CA',
+                    startDate: '2022 - Present',
+                    description: 'Spearheaded migration of legacy monolith to micro-frontend architecture, improving page load speed by 42%. Mentored team of 12 engineers and introduced automated UI component testing protocols.'
+                },
+                {
+                    id: 2,
+                    role: 'Full-Stack Software Engineer',
+                    company: 'Nebula Cloud Systems',
+                    location: 'Austin, TX',
+                    startDate: '2019 - 2022',
+                    description: 'Built high-throughput real-time analytics dashboard processing over 4M daily active events using Node.js, React, and PostgreSQL. Reduced cloud infrastructure costs by 28% through query optimization.'
+                }
+            ],
+            education: [
+                {
+                    id: 1,
+                    degree: 'B.S. in Computer Science',
+                    institution: 'University of California, Berkeley',
+                    year: '2015 - 2019',
+                    details: 'Graduated Magna Cum Laude. President of Developer Student Club.'
+                }
+            ],
+            skills: [
+                { category: 'Frontend', list: 'React, Next.js, TypeScript, Tailwind CSS, WebGL' },
+                { category: 'Backend', list: 'Node.js, Python, PostgreSQL, Redis, GraphQL' },
+                { category: 'DevOps & Tools', list: 'Docker, AWS, Kubernetes, CI/CD, Git' }
+            ],
+            tone: {
+                style: 'professional',
+                aiPrompt: ''
+            }
+        };
+
+        class ResumeApp {
+            constructor() {
+                this.loadState();
+                this.initIcons();
+                this.renderWizard();
+                this.renderPreview();
+            }
+
+            loadState() {
+                const saved = localStorage.getItem('resonator_resume_data');
+                if (saved) {
+                    try {
+                        this.data = JSON.parse(saved);
+                    } catch (e) {
+                        this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                    }
+                } else {
+                    this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                }
+            }
+
+            saveState() {
+                localStorage.setItem('resonator_resume_data', JSON.stringify(this.data));
+                this.renderPreview();
+            }
+
+            resetData() {
+                if (confirm('Are you sure you want to reset all progress back to default template?')) {
+                    localStorage.removeItem('resonator_resume_data');
+                    this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                    this.renderWizard();
+                    this.renderPreview();
+                }
+            }
+
+            initIcons() {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }
+
+            setLayout(layout) {
+                this.data.layout = layout;
+                // update buttons active state
+                ['modern', 'executive', 'creative'].forEach(l => {
+                    const btn = document.getElementById(`layout-${l}`);
+                    if (btn) {
+                        if (l === layout) {
+                            btn.className = 'px-3 py-1.5 rounded-lg transition bg-white text-slate-900 shadow-sm';
+                        } else {
+                            btn.className = 'px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900';
+                        }
+                    }
+                });
+                this.saveState();
+            }
+
+            setAccent(color) {
+                this.data.accent = color;
+                this.saveState();
+            }
+
+            nextStep() {
+                if (this.data.step < 5) {
+                    this.data.step++;
+                    this.renderWizard();
+                    this.saveState();
+                }
+            }
+
+            prevStep() {
+                if (this.data.step > 1) {
+                    this.data.step--;
+                    this.renderWizard();
+                    this.saveState();
+                }
+            }
+
+            goToStep(stepNum) {
+                this.data.step = stepNum;
+                this.renderWizard();
+                this.saveState();
+            }
+
+            renderWizard() {
+                const step = this.data.step;
+                document.getElementById('current-step-num').textContent = step;
+                document.getElementById('wizard-progress').style.width = `${(step / 5) * 100}%`;
+                
+                const titles = [
+                    'Personal Information',
+                    'Work Experience',
+                    'Education History',
+                    'Skills & Expertise',
+                    'AI Tone & Polish'
+                ];
+                document.getElementById('step-title').textContent = titles[step - 1];
+                document.getElementById('step-counter').textContent = step;
+
+                // Buttons state
+                const prevBtn = document.getElementById('prev-btn');
+                const nextBtn = document.getElementById('next-btn');
+                prevBtn.disabled = (step === 1);
+                if (step === 5) {
+                    nextBtn.textContent = 'Finish & Review';
+                } else {
+                    nextBtn.textContent = 'Continue';
+                }
+
+                const container = document.getElementById('wizard-form-container');
+                container.innerHTML = '';
+
+                if (step === 1) {
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name</label>
+                                <input type="text" value="${this.data.personal.fullName}" oninput="app.updatePersonal('fullName', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="e.g. Jane Doe">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Target Job Title</label>
+                                <input type="text" value="${this.data.personal.jobTitle}" oninput="app.updatePersonal('jobTitle', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="e.g. Product Designer">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email Address</label>
+                                    <input type="email" value="${this.data.personal.email}" oninput="app.updatePersonal('email', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="jane@example.com">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Phone Number</label>
+                                    <input type="text" value="${this.data.personal.phone}" oninput="app.updatePersonal('phone', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="+1 (555) 019-2831">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Location</label>
+                                    <input type="text" value="${this.data.personal.location}" oninput="app.updatePersonal('location', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="New York, NY">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1"> Portfolio / Website </label>
+                                    <input type="text" value="${this.data.personal.website}" oninput="app.updatePersonal('website', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="janedoe.com">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">LinkedIn</label>
+                                    <input type="text" value="${this.data.personal.linkedin}" oninput="app.updatePersonal('location', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium" placeholder="New York, NY">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Professional Summary</label>
+                                <textarea rows="4" oninput="app.updatePersonal('summary', this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm font-medium resize-none" placeholder="Write a short pitch about your career highlights...">${this.data.personal.summary}</textarea>
+                            </div>
+                        </div>
+                    `;
+                } else if (step === 2) {
+                    let expHtml = this.data.experiences.map((exp, idx) => `
+                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 relative group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Experience #${idx + 1}</span>
+                                <button onclick="app.removeExperience(${exp.id})" class="text-slate-400 hover:text-red-600 transition text-xs font-medium">Remove</button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input type="text" value="${exp.role}" oninput="app.updateExperience(${exp.id}, 'role', this.value)" placeholder="Job Title" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                                <input type="text" value="${exp.company}" oninput="app.updateExperience(${exp.id}, 'company', this.value)" placeholder="Company Name" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input type="text" value="${exp.location}" oninput="app.updateExperience(${exp.id}, 'location', this.value)" placeholder="Location" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                                <input type="text" value="${exp.startDate}" oninput="app.updateExperience(${exp.id}, 'startDate', this.value)" placeholder="Date (e.g. 2021 - Present)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                            </div>
+                            <textarea rows="3" oninput="app.updateExperience(${exp.id}, 'description', this.value)" placeholder="Key achievements and responsibilities..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white resize-none">${exp.description}</textarea>
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-slate-500">Add your recent professional experience.</p>
+                                <button onclick="app.addExperience()" class="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition">+ Add Experience</button>
+                            </div>
+                            <div class="space-y-4">
+                                ${expHtml || '<p class="text-sm text-slate-400 text-center py-6">No experience added yet.</p>'}
+                            </div>
+                        </div>
+                    `;
+                } else if (step === 3) {
+                    let eduHtml = this.data.education.map((edu, idx) => `
+                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Education #${idx + 1}</span>
+                                <button onclick="app.removeEducation(${edu.id})" class="text-slate-400 hover:text-red-600 transition text-xs font-medium">Remove</button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input type="text" value="${edu.degree}" oninput="app.updateEducation(${edu.id}, 'degree', this.value)" placeholder="Degree / Certificate" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                                <input type="text" value="${edu.institution}" oninput="app.updateEducation(${edu.id}, 'institution', this.value)" placeholder="Institution Name" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-1 gap-3">
+                                <input type="text" value="${edu.year}" oninput="app.updateEducation(${edu.id}, 'year', this.value)" placeholder="Year (e.g. 2018 - 2022)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                            </div>
+                            <textarea rows="2" oninput="app.updateEducation(${edu.id}, 'details', this.value)" placeholder="Honors, activities, GPA..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white resize-none">${edu.details}</textarea>
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-slate-500">List your academic qualifications.</p>
+                                <button onclick="app.addEducation()" class="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition">+ Add Education</button>
+                            </div>
+                            <div class="space-y-4">
+                                ${eduHtml || '<p class="text-sm text-slate-400 text-center py-6">No education added yet.</p>'}
+                            </div>
+                        </div>
+                    `;
+                } else if (step === 4) {
+                    let skillsHtml = this.data.skills.map((skill, idx) => `
+                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 relative">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Skill Category #${idx + 1}</span>
+                                <button onclick="app.removeSkill(${idx})" class="text-slate-400 hover:text-red-600 transition text-xs font-medium">Remove</button>
+                            </div>
+                            <input type="text" value="${skill.category}" oninput="app.updateSkill(${idx}, 'category', this.value)" placeholder="Category (e.g. Frontend, Languages)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white font-medium">
+                            <input type="text" value="${skill.list}" oninput="app.updateSkill(${idx}, 'list', this.value)" placeholder="Comma separated items (e.g. React, Vue, CSS)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                        </div>
+                    `).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-slate-500">Group your technical and soft skills.</p>
+                                <button onclick="app.addSkill()" class="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition">+ Add Skill Group</button>
+                            </div>
+                            <div class="space-y-4">
+                                ${skillsHtml}
+                            </div>
+                        </div>
+                    `;
+                } else if (step === 5) {
+                    container.innerHTML = `
+                        <div class="space-y-5">
+                            <div class="p-4 bg-slate-900 text-white rounded-2xl space-y-2 shadow-md">
+                                <div class="flex items-center space-x-2 text-amber-400 font-semibold text-xs tracking-wider uppercase">
+                                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                    <span>AI Assistant Ready</span>
+                                </div>
+                                <h3 class="font-bold text-base">Polish your resume tone instantly</h3>
+                                <p class="text-xs text-slate-300">Choose a professional tone or give custom instructions to refine your summary and descriptions.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Select Style Tone</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="app.setToneStyle('professional')" id="tone-professional" class="p-3 text-left rounded-xl border text-xs font-medium transition ${this.data.tone.style === 'professional' ? 'border-slate-900 bg-slate-50 text-slate-900 ring-1 ring-slate-900' : 'border-slate-200 hover:border-slate-300 text-slate-600'}">
+                                        <div class="font-bold mb-0.5">Professional</div>
+                                        <div class="text-[10px] text-slate-400">Corporate & clean</div>
+                                    </button>
+                                    <button onclick="app.setToneStyle('startup')" id="tone-startup" class="p-3 text-left rounded-xl border text-xs font-medium transition ${this.data.tone.style === 'startup' ? 'border-slate-900 bg-slate-50 text-slate-900 ring-1 ring-slate-900' : 'border-slate-200 hover:border-slate-300 text-slate-600'}">
+                                        <div class="font-bold mb-0.5">Startup</div>
+                                        <div class="text-[10px] text-slate-400">Dynamic & bold</div>
+                                    </button>
+                                    <button onclick="app.setToneStyle('creative')" id="tone-creative" class="p-3 text-left rounded-xl border text-xs font-medium transition ${this.data.tone.style === 'creative' ? 'border-slate-900 bg-slate-50 text-slate-900 ring-1 ring-slate-900' : 'border-slate-200 hover:border-slate-300 text-slate-600'}">
+                                        <div class="font-bold mb-0.5">Creative</div>
+                                        <div class="text-[10px] text-slate-400">Artistic & fluid</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">AI Prompt Enhancement Instruction</label>
+                                <div class="flex space-x-2">
+                                    <input type="text" id="ai-prompt-input" value="${this.data.tone.aiPrompt || ''}" oninput="app.data.tone.aiPrompt = this.value" placeholder="e.g., Emphasize leadership and scalability metrics" class="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+                                    <button onclick="app.runAIPolish()" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1 shrink-0">
+                                        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                                        <span>Enhance</span>
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Click enhance to automatically optimize wording with AI intelligence.</p>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 text-center">
+                                <p class="text-xs text-slate-500 mb-2">Your resume is ready for export!</p>
+                                <button onclick="app.exportPDF()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm">
+                                    Export as PDF Now
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                this.initIcons();
+            }
+
+            // Data mutators
+            updatePersonal(field, value) {
+                this.data.personal[field] = value;
+                this.saveState();
+            }
+
+            addExperience() {
+                this.data.experiences.push({
+                    id: Date.now(),
+                    role: 'Software Engineer',
+                    company: 'Acme Corp',
+                    location: 'Remote',
+                    startDate: '2023 - Present',
+                    description: 'Developed and maintained core web applications using modern technologies.'
+                });
+                this.renderWizard();
+                this.saveState();
+            }
+
+            removeExperience(id) {
+                this.data.experiences = this.data.experiences.filter(e => e.id !== id);
+                this.renderWizard();
+                this.saveState();
+            }
+
+            updateExperience(id, field, value) {
+                const exp = this.data.experiences.find(e => e.id === id);
+                if (exp) {
+                    exp[field] = value;
+                    this.saveState();
+                }
+            }
+
+            addEducation() {
+                this.data.education.push({
+                    id: Date.now(),
+                    degree: 'B.S. in Information Technology',
+                    institution: 'State University',
+                    year: '2016 - 2020',
+                    details: 'Relevant coursework in software engineering and databases.'
+                });
+                this.renderWizard();
+                this.saveState();
+            }
+
+            removeEducation(id) {
+                this.data.education = this.data.education.filter(e => e.id !== id);
+                this.renderWizard();
+                this.saveState();
+            }
+
+            updateEducation(id, field, value) {
+                const edu = this.data.education.find(e => e.id === id);
+                if (edu) {
+                    edu[field] = value;
+                    this.saveState();
+                }
+            }
+
+            addSkill() {
+                this.data.skills.push({ category: 'Tools & Methods', list: 'Agile, Scrum, Jira, Figma' });
+                this.renderWizard();
+                this.saveState();
+            }
+
+            removeSkill(index) {
+                this.data.skills.splice(index, 1);
+                this.renderWizard();
+                this.saveState();
+            }
+
+            updateSkill(index, field, value) {
+                if (this.data.skills[index]) {
+                    this.data.skills[index][field] = value;
+                    this.saveState();
+                }
+            }
+
+            setToneStyle(style) {
+                this.data.tone.style = style;
+                this.renderWizard();
+                this.saveState();
+            }
+
+            runAIPolish() {
+                // Simulated AI enhancement for professional touch
+                this.data.personal.summary = `Strategic and visionary ${this.data.personal.jobTitle} with a proven track record of delivering high-impact technological solutions. Recognized for exceptional problem-solving abilities and cross-functional leadership.`;
+                this.data.experiences.forEach(exp => {
+                    if (!exp.description.startsWith('Engineered')) {
+                        exp.description = `Engineered core systems and optimized performance, resulting in measurable efficiency gains and robust scalability across teams.`;
+                    }
+                });
+                this.renderWizard();
+                this.saveState();
+                alert('AI successfully polished your resume descriptions and summary!');
+            }
+
+            exportPDF() {
+                window.print();
+            }
+
+            renderPreview() {
+                const container = document.getElementById('resume-preview-container');
+                const p = this.data.personal;
+                const accent = this.data.accent;
+                const layout = this.data.layout;
+
+                let html = '';
+
+                if (layout === 'modern') {
+                    // Modern Clean Minimal Layout
+                    html = `
+                        <div class="space-y-6">
+                            <!-- Header -->
+                            <div class="border-b pb-6" style="border-color: ${accent}20">
+                                <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">${p.fullName || 'Your Name'}</h1>
+                                <p class="text-lg font-medium mt-1" style="color: ${accent}">${p.jobTitle}</p>
+                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 mt-3 font-medium">
+                                    ${p.email ? `<span><i data-lucide="mail" class="w-3.5 h-3.5 inline mr-1 opacity-70"></i>${p.email}</span>` : ''}
+                                    ${p.phone ? `<span><i data-lucide="phone" class="w-3.5 h-3.5 inline mr-1 opacity-70"></i>${p.phone}</span>` : ''}
+                                    ${p.location ? `<span><i data-lucide="map-pin" class="w-3.5 h-3.5 inline mr-1 opacity-70"></i>${p.location}</span>` : ''}
+                                    ${p.website ? `<span><i data-lucide="globe" class="w-3.5 h-3.5 inline mr-1 opacity-70"></i>${p.website}</span>` : ''}
+                                    ${p.linkedin ? `<span><i data-lucide="globe" class="w-3.5 h-3.5 inline mr-1 opacity-70"></i>${p.linkedin}</span>` : ''}                                    
+                                </div>
+                            </div>
+
+                            <!-- Summary -->
+                            ${p.summary ? `
+                                <div class="space-y-2">
+                                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Professional Summary</h2>
+                                    <p class="text-sm text-slate-700 leading-relaxed">${p.summary}</p>
+                                </div>
+                            ` : ''}
+
+                            <!-- Experience -->
+                            ${this.data.experiences.length > 0 ? `
+                                <div class="space-y-4">
+                                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Experience</h2>
+                                    <div class="space-y-4">
+                                        ${this.data.experiences.map(e => `
+                                            <div class="group">
+                                                <div class="flex flex-col sm:flex-row sm:items-center justify-between">
+                                                    <h3 class="font-bold text-slate-900 text-sm">${e.role}</h3>
+                                                    <span class="text-xs font-semibold text-slate-500">${e.startDate}</span>
+                                                </div>
+                                                <div class="text-xs font-medium text-slate-600 mb-1">${e.company} ${e.location ? `• ${e.location}` : ''}</div>
+                                                <p class="text-xs text-slate-600 leading-relaxed">${e.description}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Education -->
+                            ${this.data.education.length > 0 ? `
+                                <div class="space-y-3">
+                                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Education</h2>
+                                    <div class="space-y-3">
+                                        ${this.data.education.map(ed => `
+                                            <div>
+                                                <div class="flex flex-col sm:flex-row sm:items-center justify-between">
+                                                    <h3 class="font-bold text-slate-900 text-sm">${ed.degree}</h3>
+                                                    <span class="text-xs font-semibold text-slate-500">${ed.year}</span>
+                                                </div>
+                                                <div class="text-xs font-medium text-slate-600">${ed.institution}</div>
+                                                ${ed.details ? `<p class="text-xs text-slate-500 mt-0.5">${ed.details}</p>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Skills -->
+                            ${this.data.skills.length > 0 ? `
+                                <div class="space-y-3">
+                                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Skills</h2>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        ${this.data.skills.map(s => `
+                                            <div class="text-xs">
+                                                <span class="font-bold text-slate-900">${s.category}:</span> <span class="text-slate-600">${s.list}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else if (layout === 'executive') {
+                    // Executive Layout (Centered, refined serif accents)
+                    html = `
+                        <div class="space-y-6 text-center">
+                            <!-- Header -->
+                            <div class="border-b pb-6 space-y-2" style="border-color: ${accent}30">
+                                <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 tracking-tight">${p.fullName || 'Your Name'}</h1>
+                                <p class="text-sm font-semibold tracking-widest uppercase" style="color: ${accent}">${p.jobTitle}</p>
+                                <div class="flex flex-wrap justify-center items-center gap-3 text-xs text-slate-600 pt-1">
+                                    ${p.email ? `<span>${p.email}</span>` : ''}
+                                    ${p.phone ? `<span>• ${p.phone}</span>` : ''}
+                                    ${p.location ? `<span>• ${p.location}</span>` : ''}
+                                    ${p.website ? `<span>• ${p.website}</span>` : ''}
+                                    ${p.linkedin ? `<span>• ${p.linkedin}</span>` : ''}
+                                </div>
+                            </div>
+
+                            <!-- Summary -->
+                            ${p.summary ? `
+                                <div class="max-w-xl mx-auto">
+                                    <p class="text-sm text-slate-700 italic leading-relaxed">"${p.summary}"</p>
+                                </div>
+                            ` : ''}
+
+                            <!-- Experience -->
+                            ${this.data.experiences.length > 0 ? `
+                                <div class="space-y-4 text-left pt-2">
+                                    <h2 class="text-xs font-serif font-bold uppercase tracking-widest text-center text-slate-400 border-b pb-1">Professional Experience</h2>
+                                    <div class="space-y-4">
+                                        ${this.data.experiences.map(e => `
+                                            <div>
+                                                <div class="flex justify-between items-baseline">
+                                                    <h3 class="font-bold text-slate-900 text-sm">${e.role} — <span class="font-normal" style="color: ${accent}">${e.company}</span></h3>
+                                                    <span class="text-xs text-slate-500 font-medium">${e.startDate}</span>
+                                                </div>
+                                                <p class="text-xs text-slate-600 mt-1 leading-relaxed">${e.description}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Education -->
+                            ${this.data.education.length > 0 ? `
+                                <div class="space-y-3 text-left pt-2">
+                                    <h2 class="text-xs font-serif font-bold uppercase tracking-widest text-center text-slate-400 border-b pb-1">Education</h2>
+                                    <div class="space-y-3">
+                                        ${this.data.education.map(ed => `
+                                            <div class="flex justify-between items-baseline">
+                                                <div>
+                                                    <h3 class="font-bold text-slate-900 text-sm">${ed.degree}</h3>
+                                                    <div class="text-xs text-slate-600">${ed.institution}</div>
+                                                </div>
+                                                <span class="text-xs text-slate-500 font-medium">${ed.year}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Skills -->
+                            ${this.data.skills.length > 0 ? `
+                                <div class="space-y-2 text-left pt-2">
+                                    <h2 class="text-xs font-serif font-bold uppercase tracking-widest text-center text-slate-400 border-b pb-1">Core Competencies</h2>
+                                    <div class="flex flex-wrap justify-center gap-2 pt-1">
+                                        ${this.data.skills.map(s => `
+                                            <span class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-md font-medium">${s.category}: ${s.list}</span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else if (layout === 'creative') {
+                    // Creative Layout (Two column split style)
+                    html = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <!-- Left Sidebar -->
+                            <div class="md:col-span-1 space-y-6 md:border-r md:pr-6" style="border-color: ${accent}20">
+                                <div>
+                                    <h1 class="text-2xl font-bold tracking-tight text-slate-900">${p.fullName || 'Your Name'}</h1>
+                                    <p class="text-xs font-bold tracking-wider uppercase mt-1" style="color: ${accent}">${p.jobTitle || 'Profession'}</p>
+                                </div>
+
+                                <div class="space-y-2 text-xs text-slate-600">
+                                    <div class="font-bold uppercase tracking-wider text-[10px] text-slate-400">Contact</div>
+                                    ${p.email ? `<div>${p.email}</div>` : ''}
+                                    ${p.phone ? `<div>${p.phone}</div>` : ''}
+                                    ${p.location ? `<div>${p.location}</div>` : ''}
+                                    ${p.website ? `<div>${p.website}</div>` : ''}
+                                    ${p.linkedin ? `<div>${p.linkedin}</div>` : ''}
+                                </div>
+
+                                ${this.data.skills.length > 0 ? `
+                                    <div class="space-y-3">
+                                        <div class="font-bold uppercase tracking-wider text-[10px] text-slate-400">Skills</div>
+                                        <div class="space-y-2">
+                                            ${this.data.skills.map(s => `
+                                                <div>
+                                                    <div class="text-xs font-bold text-slate-800">${s.category}</div>
+                                                    <div class="text-[11px] text-slate-600">${s.list}</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Right Main Content -->
+                            <div class="md:col-span-2 space-y-6">
+                                ${p.summary ? `
+                                    <div class="space-y-1.5">
+                                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">About Me</h2>
+                                        <p class="text-xs text-slate-700 leading-relaxed">${p.summary}</p>
+                                    </div>
+                                ` : ''}
+
+                                ${this.data.experiences.length > 0 ? `
+                                    <div class="space-y-4">
+                                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Experience</h2>
+                                        <div class="space-y-4">
+                                            ${this.data.experiences.map(e => `
+                                                <div>
+                                                    <h3 class="font-bold text-slate-900 text-sm">${e.role}</h3>
+                                                    <div class="text-xs font-medium" style="color: ${accent}">${e.company} • ${e.startDate}</div>
+                                                    <p class="text-xs text-slate-600 mt-1 leading-relaxed">${e.description}</p>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${this.data.education.length > 0 ? `
+                                    <div class="space-y-3">
+                                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Education</h2>
+                                        <div class="space-y-3">
+                                            ${this.data.education.map(ed => `
+                                                <div>
+                                                    <h3 class="font-bold text-slate-900 text-sm">${ed.degree}</h3>
+                                                    <div class="text-xs text-slate-600">${ed.institution} (${ed.year})</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = html;
+                this.initIcons();
+            }
+        }
+
+        // Initialize App on load
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new ResumeApp();
+        });
+    </script>
+</body>
+</html>
